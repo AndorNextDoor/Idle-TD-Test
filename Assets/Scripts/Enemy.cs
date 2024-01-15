@@ -9,12 +9,7 @@ public class Enemy : MonoBehaviour
 
     private Transform target;
     private int waypointIndex = 0;
-    private int laneIndex = 0;
-
-    private void Start()
-    {
-
-    }
+    public int laneIndex = 0;
 
     public void SetLane(int lane)
     {
@@ -37,7 +32,7 @@ public class Enemy : MonoBehaviour
 
     void GetNextWaypoint()
     {
-        if(waypointIndex >= Path.lanes[laneIndex].transform.childCount - 2)
+        if(waypointIndex >= Path.lanes[laneIndex].transform.childCount - 1)
         {
             GameManager.Instance.TakeDamage(damage);
             Destroy(gameObject);

@@ -15,32 +15,13 @@ public class TowerPlacementController : MonoBehaviour
     private GameObject towerPreview;
 
     private bool isTowerSelected;
+    private Tile currentTile;
 
+    private bool canPlaceTower = false;
 
-
-    private void Start()
-    {
-
-    }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-        {
-            CameraController.Instance.SetCameraPos(1);
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            CameraController.Instance.SetCameraPos(2);
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha3))
-        {
-            CameraController.Instance.SetCameraPos(3);
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha4))
-        {
-            CameraController.Instance.SetCameraPos(0);
-        }
         if (Input.GetKeyDown(KeyCode.E))
         {
             SetTowerIndex(0);
@@ -55,21 +36,37 @@ public class TowerPlacementController : MonoBehaviour
 
         if (isTowerSelected)
         {
+#if UNITY_EDITOR
+            TowerPreviewPositionEditor();
+#else
             TowerPreviewPosition();
+#endif
         }
     }
 
     private void PlaceTower()
     {
-        GameObject newTower = Instantiate(towerPrefab[towerIndex], towerPreview.transform.position, Quaternion.identity);
-        DestroyTowerPreview();
-        CameraSystem.instance.isDisabled = false;
-        isTowerSelected = false;
+        if (canPlaceTower)
+        {
+            GameObject newTower = Instantiate(towerPrefab[towerIndex], towerPreview.transform.position, towerPrefab[towerIndex].transform.rotation);
+            currentTile.OccupyTile();
+            newTower.GetComponent<Tower>().SetLaneIndex(currentTile.laneIndex);
+            DestroyTowerPreview();
+            CameraSystem.instance.isDisabled = false;
+            isTowerSelected = false;
+        }
+        else
+        {
+            DestroyTowerPreview();
+            CameraSystem.instance.isDisabled = false;
+            isTowerSelected = false;
+        }
+
     }
 
-    public void SetTowerIndex(int _index)
+    private void SetTowerIndex(int _index)
     {
-        if(towerPreview != null)
+        if (towerPreview != null)
         {
             Destroy(towerPreview.gameObject);
         }
@@ -78,14 +75,36 @@ public class TowerPlacementController : MonoBehaviour
 
         CameraSystem.instance.isDisabled = true;
 
+        // Create a new tower preview
         towerPreview = Instantiate(towerPreviewPrefabs[towerIndex]);
-        Invoke("towerIsSelected", 1);
+
+        // Invoke the towerIsSelected method after a delay
+        Invoke("TowerIsSelected", 1);
     }
 
-    private void towerIsSelected()
+    private void TowerIsSelected()
     {
         isTowerSelected = true;
     }
+
+
+#if UNITY_EDITOR
+
+    private void TowerPreviewPositionEditor()
+    {
+        // Check for mouse input instead of touch
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0))
+        {
+            UpdateTowerPreviewPosition(Input.mousePosition);
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            PlaceTower();
+        }
+    }
+
+#else
 
     private void TowerPreviewPosition()
     {
@@ -107,6 +126,8 @@ public class TowerPlacementController : MonoBehaviour
         }
     }
 
+#endif
+
     private void UpdateTowerPreviewPosition(Vector2 touchPosition)
     {
         Ray ray = Camera.main.ScreenPointToRay(touchPosition);
@@ -114,20 +135,38 @@ public class TowerPlacementController : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hitData, 100, placementLayer))
         {
             Vector3 towerPosition = hitData.point;
+            currentTile = hitData.collider.gameObject.GetComponent<Tile>();
 
-            // Adjust the Y coordinate to match the ground elevation
-            float groundElevation = hitData.point.y;
 
-            // Assuming towerPreview has a base at the Y=0 position
-            towerPosition.y = groundElevation + towerPreviewPrefabs[towerIndex].transform.position.y;
+            // Snap the tower to the center of the tile
+            towerPosition = GetCenterOfTile(hitData.collider.gameObject);
+
+            towerPosition.y = towerPreviewPrefabs[towerIndex].transform.position.y;
 
             towerPreview.transform.position = towerPosition;
-            towerPreview.GetComponent<TowerPlacementColor>().SetMaterial(validPlacementMaterial);
+            
+            if (currentTile.isOccupied)
+            {
+                canPlaceTower = false;
+                towerPreview.GetComponent<TowerPlacementColor>().SetMaterial(invalidPlacementMaterial);
+            }
+            else
+            {
+                canPlaceTower = true;
+                towerPreview.GetComponent<TowerPlacementColor>().SetMaterial(validPlacementMaterial);
+            }
         }
         else
         {
+            canPlaceTower = false;
             towerPreview.GetComponent<TowerPlacementColor>().SetMaterial(invalidPlacementMaterial);
         }
+    }
+
+    private Vector3 GetCenterOfTile(GameObject tile)
+    {
+        // Calculate and return the center of the tile
+        return tile.transform.position;
     }
 
     private void DestroyTowerPreview()

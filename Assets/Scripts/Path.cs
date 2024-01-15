@@ -12,7 +12,7 @@ public class Path : MonoBehaviour
 
         for (int i = 0; i < lanes.Length; i++)
         {
-            lanes[i] = transform.GetChild(i);
+            lanes[i] = transform.GetChild(i).GetChild(0);
         }
     }
 }

@@ -87,7 +87,7 @@ public class WaveSpawner : MonoBehaviour
             for (int i = 0; i < enemy.quantity; i++)
             {
                 int lane = (i + 1) % spawnPos.Length;
-                GameObject spawnedEnemy = Instantiate(enemy.enemyPrefab, spawnPos[lane]);
+                GameObject spawnedEnemy = Instantiate(enemy.enemyPrefab, spawnPos[lane].transform.position,enemy.enemyPrefab.transform.rotation);
                 spawnedEnemy.GetComponent<Enemy>().SetLane(lane);
                 yield return new WaitForSeconds(enemy.spawnDelay);
             }
